@@ -57,13 +57,24 @@
 			directionalLight =  new THREE.DirectionalLight(0xffffff,1);
 
 		var prep_room = [], // Prep room references all objects 
-			backstage = []; // Backstage appends everything to the child of scene
+			backstage = [], // Backstage appends everything to the child of scene
+			test_particle = []; // Contains all the firework particles
 
 	</script>
 
 	<script src="js/threejs_general_functions.js"></script>
 
 	<script>
+		function TestParticle_addTo(ref_obj) {
+			test_particle.push(ref_obj);
+		}
+
+		function TestParticle_loadup() {
+			for (var i=0; i < test_particle.length; i++) {
+				prep_room.push(test_particle[i]);
+			}
+		}
+
 		function Preproom_addTo(ref_obj) {
 			prep_room.push(ref_obj); 
 		}
@@ -119,15 +130,17 @@
 			    particles,
 			    pMaterial);
 
-			particle.animating = false;
-			particle.animate_time = 0;
-			particle.animated = false;
+			particleSystem.animating = false;
+			particleSystem.animate_time = 0;
+			particleSystem.animated = false;
 
 			particleSystem.spread = 500;
 			particleSystem.particle = particles;
 			particleSystem.particleCount = particleCount;
 			particleSystem.sortParticles = true;
 			prep_room.push(particleSystem);
+
+			return particleSystem;
 		}
 
 		</script>
@@ -146,8 +159,8 @@
 
 			while (pCount --){
 				var particle = backstage[2].particle.vertices[pCount];
-				var pFirework = backstage[2 + (pCount+1)];
-				var pFirework_count = backstage[2 + (pCount+1)].particleCount;
+				//var pFirework = backstage[2 + (pCount+1)];
+				//var pFirework_count = backstage[2 + (pCount+1)].particleCount;
 
 				h = (360 * (1.0 + (time* 0.005)) % 360) / 360;
 				backstage[2].material.color.setHSL(h, 1.0, 0.6);
@@ -157,37 +170,37 @@
 				var prev_z_particle = particle.z;
 
 
-
-
-
-
-
-
-
-
 				if ( ( particle.y > 200 ) || 
 					(particle.y < -400 ) ||	
 					(particle.velocity.y > 1 ) ) {
-					pFirework.animating = false;
-					pFirework.animate_time = 0;
+					particle.animating = false;
+					particle.animated = false;
+					particle.animate_time = 0;
 
-					console.log('state1');
+					//console.log('state1');
 				}
 
-				if (pFirework.animating == false) {
+				if (particle.animating == false && particle.animated == false) {
+
+					var particleSystem = create_particle_system(0xffffff, 13, "img/particle.png", 10);
+					TestParticle_addTo(particleSystem);
+					Preproom_loadup();
+					Backstage_loadup();
+
 					particle.x = Math.random() * 500 - (500/2);
 					particle.y = -400;
 					particle.z = Math.random() * 500 - (500/2);
 					particle.velocity.y = 0.1;
 					particle.velocity_die_interval = 0;
 
-					pFirework.animating = true;
-					pFirework.animated = false;
+					particle.animating = true;
+					particle.animated = false;
 					//particle.size = particle.size * Math.random()
 
-					console.log('state2');
+					//console.log('state2');
 				}
 
+				/*
 
 				//Firework particles
 				if (pFirework.animating == true && pFirework.animated == false) {
@@ -207,16 +220,8 @@
 						console.log('state4');
 					}
 				}
-
-
 				
-
-
-
-
-
-
-
+				*/
 
 				var random_seed = Math.random() * 0.002 + 0.0004;
 				//console.log(random_seed);
@@ -226,11 +231,26 @@
 
 				particle.velocity_die_interval += 1;
 			}
-			var pCount = backstage[2].particleCount;
-			while (pCount -- ){
-				var particle = backstage[2].particle.vertices[pCount];
 
+
+			for (var i=0; i < (test_particle.length); i++) {
+				var pCount_firework = test_particle[i].particleCount;
+				while (pCount_firework -- ) {
+					var particle = test_particle[i].particle.vertices[pCount_firework];
+					particle.x += 0.1;
+				}
 			}
+			
+
+
+			/*for (var i=0; i < (prep_room.length-3); i++) {
+				var pCount_firework = backstage[3+i].particleCount;
+				while (pCount_firework -- ) {
+					var particle = backstage[3+i].particle.vertices[pCount_firework];
+					particle.x += 0.1;
+
+				}
+			}*/
 
 
 			controls.update( delta );
@@ -257,16 +277,23 @@
 
 				create_particle_system(0xffffff, 20, "img/particle.png", fireworks_count);
 
-
+				/*
 				var fireworks_particles_systems = [];
 				for (var i=0; i<fireworks_count; i++) {
 					create_particle_system(0xffffff, 13, "img/particle.png", fireworks_particle_used);
 				}
+				*/
 
 
 				loader = new THREE.JSONLoader();
-                loader.load("models/fish.js", function (geometry, materials) {
+                loader.load("models/logo.js", function (geometry, materials) {
                     mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial(materials));
+                    mesh.scale.x = 20;
+                    mesh.scale.y = 20;
+                    mesh.scale.z = 20;
+
+
+                    //console.log(scene.children[6].scale);
                     scene.add(mesh);
                 });
 
