@@ -1,0 +1,203 @@
+<html>
+	<head>
+		<title>test</title>
+		<style>canvas { width: 100%; height: 100% }</style>
+
+		<script src="js/jQuery/jquery.min.js"></script>
+		<script src="js/bootstrap/bootstrap.min.js"></script>
+		<script src="js/threejs/three.js"></script>
+		<script src="js/threejs/FirstPersonControls.js"></script>
+	</head>
+
+	<body>
+		
+	</body>
+
+	<script type="x-shader/x-vertex" id="vertexShader1">
+		#ifdef GL_ES
+		precision highp float;
+		#endif
+
+		uniform float time;
+		varying vec2 vUv;
+		
+		void main()
+		{	
+			vUv = uv;
+			vec3 newPosition = position * time;
+			gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition,1.0);
+
+		}
+	</script>
+
+	<script type="x-shader/x-fragment" id="fragmentShader1">
+		#ifdef GL_ES
+		precision highp float;
+		#endif
+		uniform sampler2D texture1;
+		varying vec2 vUv;
+
+		void main()
+		{	
+			gl_FragColor 	= texture2D(texture1, vUv);//vec4(1.0,0.0,1.0,0.1);
+		}
+	</script>
+	
+	<script>
+		var clock = new THREE.Clock(),
+			mouse = new THREE.Vector2(),
+			scene = new THREE.Scene(),
+			camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,100000),
+			controls = new THREE.FirstPersonControls(camera),
+			renderer = new THREE.WebGLRenderer({alpha: false, precision: 'highp'}),
+			projector = new THREE.Projector(),
+			raycaster = new THREE.Raycaster(),
+			light = new THREE.PointLight(0xff0000, 3, 100),
+			directionalLight =  new THREE.DirectionalLight(0xffffff,1);
+
+		var prep_room = [], // Prep room references all objects 
+			backstage = [], // Backstage appends everything to the child of scene
+			test_particle = []; // Contains all the firework particles
+
+	</script>
+
+	<script src="js/threejs_general_functions.js"></script>
+		
+	<script>
+
+		function render() {
+			requestAnimationFrame(render);
+
+			var delta = clock.getDelta(),
+			time = Math.floor(clock.getElapsedTime() * 100);
+
+			//Particle anim loop
+			var pCount = backstage[2].particleCount;
+
+			while (pCount --){
+				var particle = backstage[2].particle.vertices[pCount];
+				var prev_particle_pos = [particle.x,particle.y,particle.z];
+
+				h = (360 * (1.0 + (time* 0.005)) % 360) / 360;
+				backstage[2].material.color.setHSL(h, 1.0, 0.6);
+
+				if ( ( particle.y > 300 ) || 
+					(particle.y < -500 ) ||	
+					(particle.velocity.y > 1 ) ) {
+
+					particle.animating = false;
+					particle.animated = false;
+					particle.animate_time = 0;
+
+				} else if (particle.animating == false && particle.animated == false) {
+
+					var particleSystem = create_particle_system_firework(0xffffff, 13, "img/particle.png", 10,prev_particle_pos);
+					var particleSystem_count = particleSystem.particleCount;
+					for (var i=0; i<particleSystem_count; i++) {
+						var particle_firework = particleSystem.particle.vertices[i];
+
+						particle_firework.rotation['z'] = 0.8 * i;
+
+						
+						var euler_particle = new THREE.Euler(particle_firework.rotation['x'],particle_firework.rotation['y'],particle_firework.rotation['z'],"XYZ");
+						var quaternion = new THREE.Quaternion(particle_firework['x'],particle_firework['y'],particle_firework['z']);
+
+						particle_firework.applyEuler(euler_particle);
+						
+					}
+					Preproom_loadup();
+					Backstage_loadup();
+
+					particle.x = Math.random() * 500 - (500/2);
+					particle.y = -400;
+					particle.z = Math.random() * 500 - (500/2);
+					particle.velocity.y = 0.1;
+					particle.velocity_die_interval = 0;
+
+					particle.animating = true;
+					particle.animated = false;
+				} else {
+					var random_seed = Math.random() * 0.002 + 0.0004;
+					particle.velocity.y -= (Math.random() * .1 * 2.3 ) - ( ( particle.velocity_die_interval * 1.1 ) * random_seed);
+
+					particle.y -= particle.velocity.y;
+
+					particle.velocity_die_interval += 1;
+				}
+
+				
+			}
+
+
+			for (var i=0; i < (test_particle.length); i++) {
+				var pCount_firework = test_particle[i].particleCount;
+
+				test_particle[i].material.color.setHSL(h, 1.0, 0.6);
+				while (pCount_firework -- ) {
+					var particle_test = test_particle[i].particle.vertices[pCount_firework];
+
+					particle_test.velocity.x -= 0.15;
+					particle_test.z -= particle_test.velocity.x;
+
+					if (particle_test.z <= 2000 || particle_test.z >= 2000) {
+						//console.log(test_particle[i].particle.vertices);
+
+						//console.log(i);
+						//console.log(pCount_firework);
+
+						//test_particle[i].material.opacity = 0;
+						//test_particle[i].particle.vertices.splice(pCount_firework,1);
+						//test_particle.splice(pCount_firework);
+						
+						//test_particle[i].vertices.splice(pCount_firework, 1)
+					}
+				}
+
+
+			}
+
+			controls.update( delta );
+			renderer.render(scene, camera);
+		}
+
+		function init() {
+			controls.activeLook = false;
+
+			//SET STAGE DEFAULTS
+				set_camera_defaults();
+				set_controls_defaults();
+				set_renderer_defaults();
+				set_light_defaults();
+			//END STAGE DEFAULTS
+
+
+			//START CREATING MESHES / PARTICLES
+				var fireworks_count = 9;
+
+				create_particle_system(0xffffff, 20, "img/particle.png", fireworks_count);
+
+
+				loader = new THREE.JSONLoader();
+                loader.load("models/logo.js", function (geometry, materials) {
+                    mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial(materials));
+                    mesh.scale.x = 20;
+                    mesh.scale.y = 20;
+                    mesh.scale.z = 20;
+                    scene.add(mesh);
+                });
+			//END CREATING MESHES / PARTICLES
+
+
+			//START APPENDING TO STAGE
+				Preproom_loadup();
+				Backstage_loadup();
+			//END APPENDING TO STAGE
+			
+			render();
+		}
+
+		init();
+
+	</script>
+
+</html>
