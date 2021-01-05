@@ -13,6 +13,7 @@
 		
 	</body>
 
+
 	<script type="x-shader/x-vertex" id="vertexShader1">
 		#ifdef GL_ES
 		precision highp float;
@@ -45,7 +46,7 @@
 	
 	<script>
 		var clock = new THREE.Clock(),
-			mouse = new THREE.Vector2(),
+			mouse = new THREE.Vector2(), INTERSECTED,
 			scene = new THREE.Scene(),
 			camera = new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,100000),
 			controls = new THREE.FirstPersonControls(camera),
@@ -56,14 +57,82 @@
 			directionalLight =  new THREE.DirectionalLight(0xffffff,1);
 
 		var prep_room = [], // Prep room references all objects 
-			backstage = [], // Backstage appends everything to the child of scene
-			test_particle = []; // Contains all the firework particles
+			backstage = []; // Backstage appends everything to the child of scene
 
 	</script>
 
 	<script src="js/threejs_general_functions.js"></script>
-		
+
 	<script>
+		function Preproom_addTo(ref_obj) {
+			prep_room.push(ref_obj); 
+		}
+
+		function Preproom_loadup() {
+			for (var i=0; i < prep_room.length; i++) {
+				backstage.push(prep_room[i]);
+			}
+		}
+
+		function Backstage_loadup() {
+			for (var i=0; i < backstage.length; i++) {
+				//console.log(backstage[i]);
+				scene.add(backstage[i]);
+			}
+		}
+
+
+
+		function create_particle_system(color, size, particle_map, particleCount) {
+			var particleCount = particleCount,
+				particles = new THREE.Geometry(),
+				pMaterial = new THREE.ParticleBasicMaterial({
+					color: color,
+					size: size,
+					map: THREE.ImageUtils.loadTexture(
+						particle_map
+					),
+					blending: THREE.AdditiveBlending,
+					transparent: true,
+					opacity: 0.7,
+				})
+
+			for (var i = 0; i < particleCount; i++) {
+				var spread = 500,
+					pX = Math.random() * spread - (spread/2),
+					pY = Math.random() * spread - (spread/2),
+					pZ = Math.random() * spread - (spread/2),
+					particle = new THREE.Vertex(
+						new THREE.Vector3(pX, pY, pZ)
+					);
+
+				particle.animating = false;
+				particle.animate_time = 0;
+				particle.animated = false;
+
+				particle.velocity = new THREE.Vector3(0,-Math.random(),0);
+				particle.velocity_die_interval = 0;
+				particles.vertices.push(particle);
+			}
+
+			var particleSystem = new THREE.ParticleSystem(
+			    particles,
+			    pMaterial);
+
+			particle.animating = false;
+			particle.animate_time = 0;
+			particle.animated = false;
+
+			particleSystem.spread = 500;
+			particleSystem.particle = particles;
+			particleSystem.particleCount = particleCount;
+			particleSystem.sortParticles = true;
+			prep_room.push(particleSystem);
+		}
+
+		</script>
+		
+		<script>
 
 		function render() {
 			requestAnimationFrame(render);
@@ -71,97 +140,109 @@
 			var delta = clock.getDelta(),
 			time = Math.floor(clock.getElapsedTime() * 100);
 
+
 			//Particle anim loop
 			var pCount = backstage[2].particleCount;
 
 			while (pCount --){
 				var particle = backstage[2].particle.vertices[pCount];
-				var prev_particle_pos = [particle.x,particle.y,particle.z];
+				var pFirework = backstage[2 + (pCount+1)];
+				var pFirework_count = backstage[2 + (pCount+1)].particleCount;
 
 				h = (360 * (1.0 + (time* 0.005)) % 360) / 360;
 				backstage[2].material.color.setHSL(h, 1.0, 0.6);
 
-				if ( ( particle.y > 300 ) || 
-					(particle.y < -500 ) ||	
+				var prev_x_particle = particle.x;
+				var prev_y_particle = particle.y;
+				var prev_z_particle = particle.z;
+
+
+
+
+
+
+
+
+
+
+				if ( ( particle.y > 200 ) || 
+					(particle.y < -400 ) ||	
 					(particle.velocity.y > 1 ) ) {
+					pFirework.animating = false;
+					pFirework.animate_time = 0;
 
-					particle.animating = false;
-					particle.animated = false;
-					particle.animate_time = 0;
-
-				} else if (particle.animating == false && particle.animated == false) {
-
-					var particleSystem = create_particle_system_firework(0xffffff, 13, "img/particle.png", 10,prev_particle_pos);
-					var particleSystem_count = particleSystem.particleCount;
-					for (var i=0; i<particleSystem_count; i++) {
-						var particle_firework = particleSystem.particle.vertices[i];
-
-						particle_firework.rotation['z'] = 0.8 * i;
-
-						
-						var euler_particle = new THREE.Euler(particle_firework.rotation['x'],particle_firework.rotation['y'],particle_firework.rotation['z'],"XYZ");
-						var quaternion = new THREE.Quaternion(particle_firework['x'],particle_firework['y'],particle_firework['z']);
-
-						particle_firework.applyEuler(euler_particle);
-						
-					}
-					Preproom_loadup();
-					Backstage_loadup();
-
+					console.log('state1');
+				} else {
 					particle.x = Math.random() * 500 - (500/2);
 					particle.y = -400;
 					particle.z = Math.random() * 500 - (500/2);
 					particle.velocity.y = 0.1;
 					particle.velocity_die_interval = 0;
 
-					particle.animating = true;
-					particle.animated = false;
-				} else {
-					var random_seed = Math.random() * 0.002 + 0.0004;
-					particle.velocity.y -= (Math.random() * .1 * 2.3 ) - ( ( particle.velocity_die_interval * 1.1 ) * random_seed);
+					pFirework.animating = true;
+					pFirework.animated = false;
+					//particle.size = particle.size * Math.random()
 
-					particle.y -= particle.velocity.y;
-
-					particle.velocity_die_interval += 1;
+					console.log('state2');
 				}
+
+
+
+				//Firework particles
+				if (pFirework.animating == true && pFirework.animated == false) { //Firework is animating and not animated finish
+					for (var i =0; i < pFirework_count; i++){
+						var particle_firework = pFirework.particle.vertices[i];
+
+						particle_firework.x = prev_x_particle;
+						particle_firework.y = prev_y_particle;
+						particle_firework.z = prev_z_particle;
+
+						console.log('state3');
+					}
+
+					pFirework.animate_time += 1;
+
+					if (pFirework.animate_time >= 10 ) {
+						pFirework.animated = true;
+						console.log('state4');
+					}
+				} else { //Fire is not animating and animated finish
+
+				}
+
 
 				
+
+
+
+
+
+
+
+
+				var random_seed = Math.random() * 0.002 + 0.0004;
+				//console.log(random_seed);
+				particle.velocity.y -= (Math.random() * .1 * 2.3 ) - ( ( particle.velocity_die_interval * 1.1 ) * random_seed);
+
+				particle.y -= particle.velocity.y;
+
+				particle.velocity_die_interval += 1;
+			}
+			var pCount = backstage[2].particleCount;
+			while (pCount -- ){
+				var particle = backstage[2].particle.vertices[pCount];
+
 			}
 
-
-			for (var i=0; i < (test_particle.length); i++) {
-				var pCount_firework = test_particle[i].particleCount;
-
-				test_particle[i].material.color.setHSL(h, 1.0, 0.6);
-				while (pCount_firework -- ) {
-					var particle_test = test_particle[i].particle.vertices[pCount_firework];
-
-					particle_test.velocity.x -= 0.15;
-					particle_test.z -= particle_test.velocity.x;
-
-					if (particle_test.z <= 2000 || particle_test.z >= 2000) {
-						//console.log(test_particle[i].particle.vertices);
-
-						//console.log(i);
-						//console.log(pCount_firework);
-
-						//test_particle[i].material.opacity = 0;
-						//test_particle[i].particle.vertices.splice(pCount_firework,1);
-						//test_particle.splice(pCount_firework);
-						
-						//test_particle[i].vertices.splice(pCount_firework, 1)
-					}
-				}
-
-
-			}
 
 			controls.update( delta );
 			renderer.render(scene, camera);
 		}
 
 		function init() {
+			//scene.fog = new THREE.FogExp2(0xaaccff, 0.0007);
 			controls.activeLook = false;
+
 
 			//SET STAGE DEFAULTS
 				set_camera_defaults();
@@ -172,19 +253,26 @@
 
 
 			//START CREATING MESHES / PARTICLES
-				var fireworks_count = 9;
+
+				var fireworks_count = 10;
+				var fireworks_particle_used = 15;
 
 				create_particle_system(0xffffff, 20, "img/particle.png", fireworks_count);
 
 
+				var fireworks_particles_systems = [];
+				for (var i=0; i<fireworks_count; i++) {
+					create_particle_system(0xffffff, 13, "img/particle.png", fireworks_particle_used);
+				}
+
+
 				loader = new THREE.JSONLoader();
-                loader.load("models/logo.js", function (geometry, materials) {
+                loader.load("models/fish.js", function (geometry, materials) {
                     mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial(materials));
-                    mesh.scale.x = 20;
-                    mesh.scale.y = 20;
-                    mesh.scale.z = 20;
                     scene.add(mesh);
                 });
+
+
 			//END CREATING MESHES / PARTICLES
 
 
@@ -198,6 +286,5 @@
 
 		init();
 
-	</script>
-
+		</script>
 </html>
